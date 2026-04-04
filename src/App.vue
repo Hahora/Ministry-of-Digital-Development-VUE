@@ -1,0 +1,15 @@
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+import AppLayout from './components/layout/AppLayout.vue'
+
+const route = useRoute()
+const isPublic = computed(() => !!route.meta?.public)
+</script>
+
+<template>
+  <!-- Публичные страницы (логин) — без лейаута -->
+  <RouterView v-if="isPublic" />
+  <!-- Основной лейаут -->
+  <AppLayout v-else />
+</template>
