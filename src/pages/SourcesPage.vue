@@ -6,7 +6,8 @@ import MetricCard from '@/components/common/MetricCard.vue'
 import IconVK from '@/components/icons/IconVK.vue'
 import IconTelegram from '@/components/icons/IconTelegram.vue'
 import { Globe, Plus, X, Check, Link, Copy, ClipboardPaste } from 'lucide-vue-next'
-import { sourceStats } from '@/data/mockData'
+import { sources as sourcesApi } from '@/services/api'
+import { onMounted } from 'vue'
 
 const typeIconMap: Record<string, Component> = {
   vk: IconVK,
@@ -30,25 +31,12 @@ interface MockSource {
   custom?: boolean
 }
 
-const sources = ref<MockSource[]>([
-  // ВКонтакте
-  { url: 'vk.com/rostov_online', type: 'vk', active: true },
-  { url: 'vk.com/rostov_govorit', type: 'vk', active: true },
-  { url: 'vk.com/avto_rostov', type: 'vk', active: true },
-  { url: 'vk.com/rabota_rostov', type: 'vk', active: true },
-  { url: 'vk.com/roditeli_rostov', type: 'vk', active: true },
-  { url: 'vk.com/novocherkassk_tszh', type: 'vk', active: true },
-  { url: 'vk.com/taganrog_online', type: 'vk', active: true },
-  { url: 'vk.com/rostov_gkh', type: 'vk', active: true },
-  // Telegram
-  { url: 't.me/rostov_now', type: 'telegram', active: true },
-  { url: 't.me/rostov_news', type: 'telegram', active: true },
-  { url: 't.me/gkh_rostov', type: 'telegram', active: true },
-  { url: 't.me/taganrog_today', type: 'telegram', active: true },
-  { url: 't.me/dorogi_rostov', type: 'telegram', active: true },
-  { url: 't.me/mchs_rostov_region', type: 'telegram', active: true },
-  { url: 't.me/transport_rostov', type: 'telegram', active: true },
-])
+const sources = ref<MockSource[]>([])
+
+onMounted(async () => {
+  const res = await sourcesApi.list().catch(() => ({ data: [] }))
+  sources.value = (res.data || []).map((s: any) => ({ url: s.url, type: s.type, active: s.active, custom: s.custom, id: s.id }))
+})
 
 const groupedSources = computed(() => {
   const groups: Record<string, MockSource[]> = {}
@@ -66,6 +54,11 @@ function sourceKey(s: MockSource) {
 const groupOrder: Array<'vk' | 'telegram'> = ['vk', 'telegram']
 const typeOptions: Array<'vk' | 'telegram'> = ['vk', 'telegram']
 const totalSources = computed(() => sources.value.length)
+
+const sourceStats = computed(() => [
+  { type: 'vk', name: 'ВКонтакте', count: sources.value.filter(s => s.type === 'vk').length, color: '#0077FF' },
+  { type: 'telegram', name: 'Telegram', count: sources.value.filter(s => s.type === 'telegram').length, color: '#26A5E4' },
+])
 
 const PREVIEW_COUNT = 6
 const showAll = ref<Record<string, boolean>>({ vk: false, telegram: false })
@@ -113,7 +106,7 @@ function closeModal() {
   showModal.value = false
 }
 
-function handleAdd() {
+async function handleAdd() {
   addError.value = ''
   const lines = newUrls.value
     .split('\n')
@@ -125,31 +118,25 @@ function handleAdd() {
     return
   }
 
-  let count = 0
-  for (const line of lines) {
-    // поддержка формата type|url (из копирования)
-    let type: 'vk' | 'telegram' = newType.value
-    let url = line
+  const urls = lines.map(line => {
     if (line.includes('|')) {
-      const [t, u] = line.split('|')
-      if (t === 'vk' || t === 'telegram') { type = t; url = u }
-    } else {
-      type = detectType(url)
+      const [, u] = line.split('|')
+      return u || line
     }
-    if (!url) continue
-    // не дублировать
-    if (!sources.value.find(s => s.url === url)) {
-      sources.value.push({ url, type, active: true, custom: true })
-      count++
-    }
-  }
+    return line
+  })
 
-  addCount.value = count
-  addSuccess.value = true
-  setTimeout(() => {
-    showModal.value = false
-    addSuccess.value = false
-  }, 1400)
+  try {
+    const res = await sourcesApi.add(urls)
+    addCount.value = res.added || 0
+    addSuccess.value = true
+    // reload sources
+    const fresh = await sourcesApi.list().catch(() => ({ data: [] }))
+    sources.value = (fresh.data || []).map((s: any) => ({ url: s.url, type: s.type, active: s.active, custom: s.custom, id: s.id }))
+    setTimeout(() => { showModal.value = false; addSuccess.value = false }, 1400)
+  } catch (e: any) {
+    addError.value = e.message || 'Ошибка добавления'
+  }
 }
 </script>
 

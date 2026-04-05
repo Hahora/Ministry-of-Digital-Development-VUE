@@ -22,7 +22,6 @@ import {
   Users,
 } from 'lucide-vue-next'
 import {
-  topics,
   categoryLabels,
   categoryColors,
   severityLabels,
@@ -30,6 +29,8 @@ import {
   type Topic,
   type Category,
 } from '@/data/mockData'
+import { topics as topicsApi } from '@/services/api'
+import { onMounted } from 'vue'
 
 const categoryIconMap: Record<string, Component> = {
   zhkh: Home,
@@ -41,6 +42,12 @@ const categoryIconMap: Record<string, Component> = {
   safety: Shield,
   social: Users,
 }
+
+const topics = ref<any[]>([])
+
+onMounted(async () => {
+  topics.value = await topicsApi.list({ limit: 50 }).catch(() => [])
+})
 
 const searchQuery = ref('')
 const selectedCategory = ref<Category | 'all'>('all')
@@ -78,7 +85,7 @@ const severityFilters = [
 ]
 
 const filteredTopics = computed(() => {
-  let result = [...topics]
+  let result = [...topics.value]
 
   if (selectedCategory.value !== 'all') {
     result = result.filter(t => t.category === selectedCategory.value)

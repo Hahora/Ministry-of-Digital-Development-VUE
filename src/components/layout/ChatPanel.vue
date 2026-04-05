@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import { X, Send, Bot, User, Sparkles, ArrowRight } from 'lucide-vue-next'
+import { chat } from '@/services/api'
 
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ close: [] }>()
@@ -47,22 +48,9 @@ function scrollToBottom() {
   })
 }
 
-const mockAnswers: Record<string, string> = {
-  'Главные проблемы':
-    'Топ-3 проблемы по данным мониторинга:\n\n1. **Срыв вывоза ТКО** — 1 847 упоминаний, рост ×6 за неделю.\n2. **Авария на теплосетях** в Советском районе — 1 523 упоминания, 3 200 жителей без отопления.\n3. **Нехватка врачей** в поликлиниках — 1 102 упоминания, дефицит 47 специалистов.',
-  'Ситуация с ЖКХ':
-    'В сфере ЖКХ зафиксировано несколько острых ситуаций:\n\n- **Вывоз ТКО**: жалобы из 14 адресов, оператор подтвердил поломку 4 мусоровозов.\n- **Теплоснабжение**: авария в Советском районе, 3 200 жителей без тепла.\n- **Водоснабжение**: плановые отключения в Ленинском районе.\n\nТональность — резко негативная (−0.78).',
-  'Тренды за неделю':
-    'Тренды 29 марта — 4 апреля:\n\n📈 **Растущие:**\n- Задымление в Новочеркасске (+45%)\n- Срыв вывоза ТКО (+34%)\n- Задержка зарплат (+22%)\n\n📉 **Затухающие:**\n- Перебои с электричеством (−3%)\n\nОбщий объём: **7 577** упоминаний, +18% к прошлой неделе.',
-  'Критические темы':
-    '🔴 **Авария теплосетей** — 3 200 жителей без отопления.\n🔴 **Срыв вывоза ТКО** — Роспотребнадзор начал проверку.\n🟠 **Задержка зарплат** — 320 сотрудников.\n\nРекомендую немедленную реакцию по первым двум темам.',
-  'По районам':
-    'Распределение проблем:\n\n- **Кировский** — ТКО, 1 847 упоминаний\n- **Советский** — теплоснабжение, 1 523 упоминания\n- **Ленинский** — водоснабжение, 634 упоминания\n- **Октябрьский** — дороги, 487 упоминаний\n- **Промышленный** — экология, 389 упоминаний',
-  'Динамика упоминаний':
-    'Динамика за 7 дней:\n\n- 29 марта: 890\n- 30 марта: 1 020\n- 31 марта: 980\n- 1 апреля: 1 150\n- 2 апреля: **2 100** ← пик (авария)\n- 3 апреля: 890\n- 4 апреля: 547\n\nПик активности связан с аварией теплосетей 2 апреля.',
-}
+const sessionId = ref<string>()
 
-function sendMessage(text?: string) {
+async function sendMessage(text?: string) {
   const msg = text || input.value.trim()
   if (!msg) return
   messages.value.push({ id: msgId++, role: 'user', text: msg, time: now() })
@@ -70,15 +58,16 @@ function sendMessage(text?: string) {
   scrollToBottom()
   isTyping.value = true
   scrollToBottom()
-  setTimeout(() => {
+  try {
+    const res = await chat.send(msg, sessionId.value)
+    sessionId.value = res.session_id
     isTyping.value = false
-    const key = Object.keys(mockAnswers).find(k => msg.includes(k))
-    const answer = key
-      ? mockAnswers[key]
-      : `По запросу «${msg}» выполнен анализ информационного поля. Обнаружено несколько релевантных тем. Для детального ответа перейдите в раздел «Аналитика» или уточните запрос.`
-    messages.value.push({ id: msgId++, role: 'assistant', text: answer, time: now() })
-    scrollToBottom()
-  }, 900 + Math.random() * 900)
+    messages.value.push({ id: msgId++, role: 'assistant', text: res.reply, time: now() })
+  } catch {
+    isTyping.value = false
+    messages.value.push({ id: msgId++, role: 'assistant', text: 'Ошибка при обращении к ИИ-ассистенту. Попробуйте позже.', time: now() })
+  }
+  scrollToBottom()
 }
 
 function handleKeydown(e: KeyboardEvent) {

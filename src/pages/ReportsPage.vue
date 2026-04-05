@@ -14,12 +14,12 @@ import {
   ArrowRight,
 } from 'lucide-vue-next'
 import {
-  topics,
   categoryLabels,
   categoryColors,
-  reports,
   type Category,
 } from '@/data/mockData'
+import { reports as reportsApi } from '@/services/api'
+import { onMounted } from 'vue'
 
 /* ── Report builder state ───────────────────────── */
 const dateFrom = ref('2026-03-28')
@@ -53,12 +53,17 @@ function toggleCategory(cat: Category) {
 }
 
 /* ── Preview mock data ──────────────────────────── */
-const previewTopics = computed(() => topics.slice(0, 3))
-const totalMentions = computed(() => topics.reduce((s, t) => s + t.mentionsCount, 0))
-const totalSources = computed(() => topics.reduce((s, t) => s + t.sourcesCount, 0))
+const previewTopics = computed(() => [] as any[])
+const totalMentions = computed(() => 0)
+const totalSources = computed(() => 0)
 
 /* ── Recent reports ─────────────────────────────── */
-const recentReports = reports
+const recentReports = ref<any[]>([])
+
+onMounted(async () => {
+  const res = await reportsApi.list().catch(() => ({ data: [] }))
+  recentReports.value = res.data || []
+})
 </script>
 
 <template>
@@ -212,7 +217,7 @@ const recentReports = reports
             <!-- Summary stats -->
             <div class="grid grid-cols-3 gap-3 mb-4">
               <div class="text-center p-2 bg-white rounded-lg border border-surface-100">
-                <p class="text-lg font-bold text-primary-600">{{ topics.length }}</p>
+                <p class="text-lg font-bold text-primary-600">{{ recentReports.length }}</p>
                 <p class="text-[10px] text-surface-400">Тем</p>
               </div>
               <div class="text-center p-2 bg-white rounded-lg border border-surface-100">

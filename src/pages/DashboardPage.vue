@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, type Component } from 'vue'
+import { ref, computed, onMounted, type Component } from 'vue'
 import { RouterLink } from 'vue-router'
 import MetricCard from '@/components/common/MetricCard.vue'
 import BaseCard from '@/components/common/BaseCard.vue'
@@ -23,14 +23,26 @@ import {
   Trophy,
   Activity,
 } from 'lucide-vue-next'
-import {
-  topics,
-  categoryLabels,
-  categoryColors,
-  severityColors,
-  dailyMentions,
-  categoryStats,
-} from '@/data/mockData'
+import { dashboard, topics as topicsApi } from '@/services/api'
+import { categoryLabels, categoryColors, severityColors } from '@/data/mockData'
+
+const topics = ref<any[]>([])
+const dailyMentions = ref<any[]>([])
+const categoryStats = ref<any[]>([])
+const summaryData = ref<any>({})
+
+onMounted(async () => {
+  const [sum, mentions, cats, topList] = await Promise.all([
+    dashboard.summary().catch(() => ({})),
+    dashboard.mentionsDaily().catch(() => ({ data: [] })),
+    dashboard.categories().catch(() => ({ data: [] })),
+    topicsApi.top(10).catch(() => []),
+  ])
+  summaryData.value = sum
+  dailyMentions.value = mentions.data || []
+  categoryStats.value = cats.data || []
+  topics.value = topList || []
+})
 
 // --- Category icon map ---
 const categoryIconComponents: Record<string, Component> = {
@@ -78,7 +90,7 @@ const mentionsChartOptions = computed(() => ({
   stroke: { curve: 'smooth' as const, width: 2.5 },
   dataLabels: { enabled: false },
   xaxis: {
-    categories: dailyMentions.map((d) => d.date),
+    categories: dailyMentions.value.map((d: any) => d.date),
     labels: { style: { colors: '#94a3b8', fontSize: '11px' } },
     axisBorder: { show: false },
     axisTicks: { show: false },
@@ -99,7 +111,7 @@ const mentionsChartOptions = computed(() => ({
 }))
 
 const mentionsChartSeries = computed(() => [
-  { name: 'Упоминания', data: dailyMentions.map((d) => d.count) },
+  { name: 'Упоминания', data: dailyMentions.value.map((d: any) => d.count) },
 ])
 
 // --- Donut chart: categories ---
@@ -110,8 +122,8 @@ const categoryChartOptions = computed(() => ({
     fontFamily: 'Inter, system-ui, sans-serif',
     offsetY: -5,
   },
-  labels: categoryStats.map((c) => categoryLabels[c.category]),
-  colors: categoryStats.map((c) => categoryColors[c.category]),
+  labels: categoryStats.value.map((c: any) => categoryLabels[c.category] || c.category),
+  colors: categoryStats.value.map((c: any) => categoryColors[c.category] || '#94a3b8'),
   legend: {
     position: 'bottom' as const,
     fontSize: '11px',
@@ -131,7 +143,7 @@ const categoryChartOptions = computed(() => ({
             label: 'Всего',
             fontSize: '12px',
             color: '#94a3b8',
-            formatter: () => categoryStats.reduce((s, c) => s + c.count, 0).toLocaleString('ru-RU'),
+            formatter: () => categoryStats.value.reduce((s: number, c: any) => s + c.count, 0).toLocaleString('ru-RU'),
           },
           value: {
             fontSize: '20px',
@@ -147,7 +159,7 @@ const categoryChartOptions = computed(() => ({
   },
 }))
 
-const categoryChartSeries = computed(() => categoryStats.map((c) => c.count))
+const categoryChartSeries = computed(() => categoryStats.value.map((c: any) => c.count))
 
 // --- Mini sparkline options factory ---
 function sparklineOptions(color: string) {
@@ -189,16 +201,16 @@ function sparklineOptions(color: string) {
     <!-- ============================================ -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
       <RouterLink to="/analytics" class="animate-slide-up block" style="animation-delay: 0ms">
-        <MetricCard title="Всего упоминаний" :value="'7 577'" :icon="BarChart3" :delta="18" />
+        <MetricCard title="Всего упоминаний" :value="summaryData.total_mentions?.toLocaleString('ru-RU') || '0'" :icon="BarChart3" :delta="summaryData.mentions_delta_pct || 0" />
       </RouterLink>
       <RouterLink to="/topics" class="animate-slide-up block" style="animation-delay: 80ms">
-        <MetricCard title="Активных тем" :value="10" :icon="Flame" :delta="3" />
+        <MetricCard title="Активных тем" :value="summaryData.active_topics || 0" :icon="Flame" :delta="summaryData.active_topics_delta || 0" />
       </RouterLink>
       <RouterLink to="/sources" class="animate-slide-up block" style="animation-delay: 160ms">
-        <MetricCard title="Каналов ВК" :value="432" :icon="IconVK" color="#0077FF" />
+        <MetricCard title="Каналов ВК" :value="summaryData.sources?.vk || 0" :icon="IconVK" color="#0077FF" />
       </RouterLink>
       <RouterLink to="/sources" class="animate-slide-up block" style="animation-delay: 240ms">
-        <MetricCard title="Каналов Telegram" :value="312" :icon="IconTelegram" color="#26A5E4" />
+        <MetricCard title="Каналов Telegram" :value="summaryData.sources?.telegram || 0" :icon="IconTelegram" color="#26A5E4" />
       </RouterLink>
     </div>
 
@@ -320,11 +332,13 @@ function sparklineOptions(color: string) {
               </div>
             </template>
             <apexchart
+              v-if="dailyMentions.length"
               :options="mentionsChartOptions"
               :series="mentionsChartSeries"
               type="area"
               height="220"
             />
+            <p v-else class="text-sm text-surface-400 py-8 text-center">Нет данных</p>
           </BaseCard>
         </div>
 
@@ -338,11 +352,13 @@ function sparklineOptions(color: string) {
               </div>
             </template>
             <apexchart
+              v-if="categoryStats.length"
               :options="categoryChartOptions"
               :series="categoryChartSeries"
               type="donut"
               height="240"
             />
+            <p v-else class="text-sm text-surface-400 py-8 text-center">Нет данных</p>
           </BaseCard>
         </div>
 

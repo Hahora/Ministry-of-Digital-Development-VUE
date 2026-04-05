@@ -1,38 +1,33 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import BaseCard from '@/components/common/BaseCard.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseBadge from '@/components/common/BaseBadge.vue'
 import MetricCard from '@/components/common/MetricCard.vue'
 import { ArrowLeft, Download, FileText, Calendar, MapPin, Tag, CheckCircle2, MessageSquare, Newspaper, Globe } from 'lucide-vue-next'
-import { reports, topics, categoryLabels, categoryColors, type Category } from '@/data/mockData'
+import { categoryLabels, categoryColors, type Category } from '@/data/mockData'
+import { reports as reportsApi } from '@/services/api'
 
 const route = useRoute()
+const report = ref<any>(null)
 
-const report = computed(() => {
-  const id = Number(route.params.id)
-  return reports.find(r => r.id === id)
+onMounted(async () => {
+  const id = route.params.id as string
+  report.value = await reportsApi.detail(id).catch(() => null)
 })
 
 const regionLabel = computed(() => {
   if (!report.value) return ''
   const map: Record<string, string> = {
     all: 'Все регионы',
-    samara: 'г. Самара',
-    tolyatti: 'г. Тольятти',
-    novokuibyshevsk: 'г. Новокуйбышевск',
-    syzran: 'г. Сызрань',
-    kinel: 'г. Кинель',
   }
   return map[report.value.region] ?? report.value.region
 })
 
 const filteredTopics = computed(() => {
   if (!report.value) return []
-  return topics
-    .filter(t => report.value!.categories.includes(t.category))
-    .slice(0, report.value.type === 'top10' ? 10 : 5)
+  return report.value.topics || []
 })
 </script>
 

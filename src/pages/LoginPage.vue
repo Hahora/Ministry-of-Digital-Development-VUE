@@ -19,8 +19,7 @@ async function handleSubmit() {
     return
   }
   loading.value = true
-  await new Promise(r => setTimeout(r, 600))
-  const user = auth.login(login.value, password.value)
+  const user = await auth.login(login.value, password.value)
   loading.value = false
   if (!user) {
     error.value = 'Неверный логин или пароль'
@@ -183,28 +182,6 @@ function onBlur(e: Event) {
           </button>
         </form>
 
-        <!-- Тестовые данные -->
-        <div class="mt-8 pt-6" style="border-top: 1px solid #f1f5f9">
-          <p class="text-[11px] font-semibold uppercase tracking-widest mb-3" style="color: #cbd5e1">Тестовые учётные данные</p>
-          <div class="space-y-2">
-            <div
-              class="flex justify-between items-center text-xs rounded-xl px-3.5 py-3 cursor-pointer transition-colors"
-              style="background: #f8fafc; border: 1px solid #f1f5f9"
-              @click="login = 'admin'; password = 'admin123'"
-            >
-              <span class="font-mono font-semibold" style="color: #334155">admin / admin123</span>
-              <span style="color: #94a3b8">Руководитель</span>
-            </div>
-            <div
-              class="flex justify-between items-center text-xs rounded-xl px-3.5 py-3 cursor-pointer transition-colors"
-              style="background: #f8fafc; border: 1px solid #f1f5f9"
-              @click="login = 'analyst'; password = 'analyst123'"
-            >
-              <span class="font-mono font-semibold" style="color: #334155">analyst / analyst123</span>
-              <span style="color: #94a3b8">Аналитик</span>
-            </div>
-          </div>
-        </div>
 
         <p class="text-center text-xs mt-8" style="color: #cbd5e1">
           Министерство цифрового развития · 2026

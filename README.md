@@ -1,5 +1,78 @@
-# Vue 3 + TypeScript + Vite
+# Система мониторинга информационного пространства — Фронтенд
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+Веб-интерфейс системы мониторинга общественного мнения и медиапространства.
 
-Learn more about the recommended Project Setup and IDE Support in the [Vue Docs TypeScript Guide](https://vuejs.org/guide/typescript/overview.html#project-setup).
+## Технологии
+
+- **Vue 3** (Composition API, TypeScript)
+- **Vue Router** — маршрутизация
+- **Tailwind CSS 4** — стилизация
+- **ApexCharts** — графики и визуализация
+- **Lucide Icons** — иконки
+- **Vite** — сборка и dev-сервер
+
+## Запуск
+
+```bash
+npm install
+npm run dev
+```
+
+Приложение будет доступно на `http://localhost:5173`.
+
+## Переменные окружения
+
+| Переменная | По умолчанию | Описание |
+|---|---|---|
+| `VITE_API_BASE_URL` | `/api/v1` | Базовый URL API бекенда |
+
+В режиме разработки Vite проксирует `/api` на `http://localhost:8000`.
+
+## Структура проекта
+
+```
+src/
+├── auth/              # Аутентификация (JWT)
+├── components/
+│   ├── common/        # Переиспользуемые компоненты (BaseCard, MetricCard, ...)
+│   ├── icons/         # SVG-иконки (VK, Telegram)
+│   └── layout/        # Лейаут (Sidebar, Header, Footer, ChatPanel)
+├── composables/       # Vue composables
+├── data/              # Константы (категории, цвета, лейблы)
+├── pages/             # Страницы приложения
+├── router/            # Конфигурация маршрутов
+└── services/          # API-клиент и сервисы
+```
+
+## Страницы
+
+| Маршрут | Страница | Описание |
+|---|---|---|
+| `/login` | LoginPage | Авторизация |
+| `/` | DashboardPage | Дашборд: метрики, топ-10 тем, графики |
+| `/topics` | TopicsPage | Лента событий с фильтрацией |
+| `/topics/:id` | TopicDetailPage | Карточка темы: факты, источники, динамика |
+| `/analytics` | AnalyticsPage | Аналитика: тренды, категории, тональность |
+| `/reports` | ReportsPage | Генерация и список отчётов |
+| `/reports/:id` | ReportDetailPage | Детали отчёта |
+| `/sources` | SourcesPage | Управление источниками (VK, Telegram) |
+
+## API
+
+Фронтенд взаимодействует с бекендом через REST API (`/api/v1`). Все запросы (кроме `/auth/login`) требуют JWT-токен в заголовке `Authorization: Bearer <token>`.
+
+Основные эндпоинты:
+- `POST /auth/login` — авторизация
+- `GET /dashboard/summary` — сводка дашборда
+- `GET /topics` — список тем
+- `GET /analytics` — аналитика за период
+- `GET /sources` — список источников
+- `POST /chat/message` — ИИ-ассистент
+
+## Сборка
+
+```bash
+npm run build
+```
+
+Результат в директории `dist/`.

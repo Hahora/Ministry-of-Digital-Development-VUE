@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, type Component } from 'vue'
+import { computed, ref, onMounted, type Component } from 'vue'
 import IconVK from '@/components/icons/IconVK.vue'
 import IconTelegram from '@/components/icons/IconTelegram.vue'
 import { useRoute, RouterLink } from 'vue-router'
@@ -30,13 +30,13 @@ import {
   Users,
 } from 'lucide-vue-next'
 import {
-  topics,
   categoryLabels,
   categoryColors,
   severityLabels,
   severityColors,
   type Category,
 } from '@/data/mockData'
+import { topics as topicsApi } from '@/services/api'
 
 const categoryIconMap: Record<string, Component> = {
   zhkh: Home,
@@ -51,9 +51,11 @@ const categoryIconMap: Record<string, Component> = {
 
 const route = useRoute()
 
-const topic = computed(() => {
-  const id = Number(route.params.id)
-  return topics.find(t => t.id === id)
+const topic = ref<any>(null)
+
+onMounted(async () => {
+  const id = route.params.id as string
+  topic.value = await topicsApi.detail(id).catch(() => null)
 })
 
 const sourceTypeLabels: Record<string, string> = {
@@ -142,7 +144,7 @@ function sentimentColor(s: number): string {
 }
 
 const trendChartOptions = computed(() => {
-  if (!topic.value) return {}
+  if (!topic.value || !topic.value.trendData?.length) return {}
   const dataLength = topic.value.trendData.length
   const labels = Array.from({ length: dataLength }, (_, i) => {
     const daysAgo = dataLength - 1 - i
@@ -425,11 +427,13 @@ const trendChartSeries = computed(() => {
         </h3>
       </template>
       <apexchart
+        v-if="topic?.trendData?.length"
         type="area"
         height="280"
         :options="trendChartOptions"
         :series="trendChartSeries"
       />
+      <p v-else class="text-sm text-surface-400 py-8 text-center">Нет данных о динамике</p>
     </BaseCard>
 
     <!-- Sources modal -->

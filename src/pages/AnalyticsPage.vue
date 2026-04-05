@@ -21,13 +21,12 @@ import {
   Users,
 } from 'lucide-vue-next'
 import {
-  topics,
   categoryLabels,
   categoryColors,
-  categoryStats,
-  dailyMentions,
   type Category,
 } from '@/data/mockData'
+import { analytics as analyticsApi, api } from '@/services/api'
+import { onMounted, watch } from 'vue'
 
 const categoryIconMap: Record<string, Component> = {
   zhkh: Home,
@@ -40,6 +39,11 @@ const categoryIconMap: Record<string, Component> = {
   social: Users,
 }
 
+const topics = ref<any[]>([])
+const categoryStats = ref<any[]>([])
+const dailyMentions = ref<any[]>([])
+const analyticsData = ref<any>({})
+
 const activePeriod = ref<string>('7d')
 const periods = [
   { key: '24h', label: '24 часа' },
@@ -47,6 +51,20 @@ const periods = [
   { key: '30d', label: '30 дней' },
   { key: 'quarter', label: 'Квартал' },
 ]
+
+async function loadAnalytics() {
+  const [data, topicsList] = await Promise.all([
+    analyticsApi.unified(activePeriod.value).catch(() => ({})),
+    api.get('/topics?limit=50').catch(() => []),
+  ])
+  analyticsData.value = data
+  dailyMentions.value = data.mentions?.daily || []
+  categoryStats.value = data.categories || []
+  topics.value = Array.isArray(topicsList) ? topicsList : []
+}
+
+onMounted(loadAnalytics)
+watch(activePeriod, loadAnalytics)
 
 /* ── Timeline chart ─────────────────────────────── */
 const timelineOptions = computed(() => ({
@@ -62,32 +80,32 @@ const timelineOptions = computed(() => ({
     gradient: { shadeIntensity: 1, opacityFrom: 0.45, opacityTo: 0.05, stops: [0, 100] },
   },
   colors: ['#6366f1'],
-  xaxis: { categories: dailyMentions.map((d) => d.date) },
+  xaxis: { categories: dailyMentions.value.map((d: any) => d.date) },
   yaxis: { labels: { style: { colors: '#94a3b8' } } },
   dataLabels: { enabled: false },
   grid: { borderColor: '#e2e8f0', strokeDashArray: 4, padding: { left: 8, right: 8, top: 0, bottom: 0 } },
   tooltip: { theme: 'light' },
 }))
-const timelineSeries = [{ name: 'Упоминания', data: dailyMentions.map((d) => d.count) }]
+const timelineSeries = computed(() => [{ name: 'Упоминания', data: dailyMentions.value.map((d: any) => d.count) }])
 
 /* ── Category donut ─────────────────────────────── */
 const donutOptions = computed(() => ({
   chart: { type: 'donut', fontFamily: 'inherit' },
-  labels: categoryStats.map((c) => categoryLabels[c.category]),
-  colors: categoryStats.map((c) => categoryColors[c.category]),
+  labels: categoryStats.value.map((c: any) => categoryLabels[c.category] || c.category),
+  colors: categoryStats.value.map((c: any) => categoryColors[c.category] || '#94a3b8'),
   legend: { position: 'bottom' as const, fontSize: '12px' },
   plotOptions: { pie: { donut: { size: '62%' } } },
   dataLabels: { enabled: false },
   tooltip: {
     y: {
       formatter: (val: number) => {
-        const total = categoryStats.reduce((s, c) => s + c.count, 0)
+        const total = categoryStats.value.reduce((s: number, c: any) => s + c.count, 0)
         return `${val} (${((val / total) * 100).toFixed(1)}%)`
       },
     },
   },
 }))
-const donutSeries = categoryStats.map((c) => c.count)
+const donutSeries = computed(() => categoryStats.value.map((c: any) => c.count))
 
 /* ── Regional bar chart ─────────────────────────── */
 const regionBarOptions = computed(() => ({
@@ -104,7 +122,7 @@ const regionBarOptions = computed(() => ({
 /* ── Sentiment radar ────────────────────────────── */
 const sentimentByCategory = computed(() => {
   const map: Record<string, { sum: number; count: number }> = {}
-  topics.forEach((t) => {
+  topics.value.forEach((t: any) => {
     if (!map[t.category]) map[t.category] = { sum: 0, count: 0 }
     map[t.category].sum += t.sentiment
     map[t.category].count += 1
@@ -136,8 +154,8 @@ const radarSeries = computed(() => [
 ])
 
 /* ── Trends ─────────────────────────────────────── */
-const risingTopics = computed(() => topics.filter((t) => t.trend === 'rising'))
-const fallingTopics = computed(() => topics.filter((t) => t.trend === 'falling'))
+const risingTopics = computed(() => topics.value.filter((t: any) => t.trend === 'rising'))
+const fallingTopics = computed(() => topics.value.filter((t: any) => t.trend === 'falling'))
 
 function sparklineOptions(data: number[], color: string) {
   return {
@@ -186,7 +204,8 @@ function sparklineOptions(data: number[], color: string) {
             Динамика упоминаний
           </h2>
         </template>
-        <apexchart type="area" height="280" :options="timelineOptions" :series="timelineSeries" />
+        <apexchart v-if="dailyMentions.length" type="area" height="280" :options="timelineOptions" :series="timelineSeries" />
+        <p v-else class="text-sm text-surface-400 py-8 text-center">Нет данных</p>
       </BaseCard>
 
       <!-- Category donut -->
@@ -197,7 +216,8 @@ function sparklineOptions(data: number[], color: string) {
             Распределение по категориям
           </h2>
         </template>
-        <apexchart type="donut" height="280" :options="donutOptions" :series="donutSeries" />
+        <apexchart v-if="categoryStats.length" type="donut" height="280" :options="donutOptions" :series="donutSeries" />
+        <p v-else class="text-sm text-surface-400 py-8 text-center">Нет данных</p>
       </BaseCard>
 
 
@@ -209,7 +229,8 @@ function sparklineOptions(data: number[], color: string) {
             Тональность по категориям
           </h2>
         </template>
-        <apexchart type="radar" height="280" :options="radarOptions" :series="radarSeries" />
+        <apexchart v-if="topics.length" type="radar" height="280" :options="radarOptions" :series="radarSeries" />
+        <p v-else class="text-sm text-surface-400 py-8 text-center">Нет данных</p>
       </BaseCard>
     </div>
 
