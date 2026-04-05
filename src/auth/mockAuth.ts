@@ -18,18 +18,40 @@ const MOCK_USERS: Array<AuthUser & { login: string; password: string }> = [
 ]
 
 const SESSION_KEY = 'madrigal_user'
+const REFRESH_KEY = 'madrigal_refresh'
+
+function generateToken(prefix: string) {
+  return `${prefix}_${Math.random().toString(36).slice(2)}_${Date.now()}`
+}
 
 export const auth = {
-  login(login: string, password: string): AuthUser | null {
+  login(login: string, password: string): (AuthUser & { token: string; refresh_token: string; expires_in: number }) | null {
     const found = MOCK_USERS.find(u => u.login === login && u.password === password)
     if (!found) return null
     const { login: _l, password: _p, ...user } = found
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(user))
-    return user
+    const token = generateToken('tok')
+    const refreshToken = generateToken('ref')
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ ...user, token, expiresAt: Date.now() + 3600_000 }))
+    localStorage.setItem(REFRESH_KEY, refreshToken)
+    return { ...user, token, refresh_token: refreshToken, expires_in: 3600 }
+  },
+
+  refreshToken(): (AuthUser & { token: string; expires_in: number }) | null {
+    const stored = localStorage.getItem(REFRESH_KEY)
+    if (!stored) return null
+    const raw = sessionStorage.getItem(SESSION_KEY)
+    if (!raw) return null
+    try {
+      const user = JSON.parse(raw) as AuthUser & { token: string; expiresAt: number }
+      const newToken = generateToken('tok')
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ ...user, token: newToken, expiresAt: Date.now() + 3600_000 }))
+      return { ...user, token: newToken, expires_in: 3600 }
+    } catch { return null }
   },
 
   logout() {
     sessionStorage.removeItem(SESSION_KEY)
+    localStorage.removeItem(REFRESH_KEY)
   },
 
   currentUser(): AuthUser | null {

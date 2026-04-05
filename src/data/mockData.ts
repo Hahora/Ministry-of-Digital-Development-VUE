@@ -409,6 +409,85 @@ export const botDetectionStats = {
   filteredMentions: 1205,
 }
 
+export interface Report {
+  id: number
+  title: string
+  type: 'full' | 'top10' | 'category' | 'region'
+  typeLabel: string
+  status: 'ready' | 'generating' | 'failed'
+  date: string
+  from: string
+  to: string
+  categories: Category[]
+  region: string
+  mentionsTotal: number
+  topicsCount: number
+  sourcesCount: number
+}
+
+export const reports: Report[] = [
+  {
+    id: 1,
+    title: 'Еженедельная сводка 24-31 марта',
+    type: 'full',
+    typeLabel: 'Полная сводка',
+    status: 'ready',
+    date: '31.03.2026',
+    from: '2026-03-24',
+    to: '2026-03-31',
+    categories: ['zhkh', 'transport', 'health', 'ecology', 'economy', 'education', 'safety', 'social'],
+    region: 'all',
+    mentionsTotal: 6840,
+    topicsCount: 9,
+    sourcesCount: 15,
+  },
+  {
+    id: 2,
+    title: 'Топ-10 проблемных тем марта',
+    type: 'top10',
+    typeLabel: 'Топ-10',
+    status: 'ready',
+    date: '01.04.2026',
+    from: '2026-03-01',
+    to: '2026-03-31',
+    categories: ['zhkh', 'transport', 'health', 'ecology'],
+    region: 'all',
+    mentionsTotal: 18420,
+    topicsCount: 10,
+    sourcesCount: 15,
+  },
+  {
+    id: 3,
+    title: 'Отчёт по ЖКХ за Q1 2026',
+    type: 'category',
+    typeLabel: 'По категориям',
+    status: 'ready',
+    date: '01.04.2026',
+    from: '2026-01-01',
+    to: '2026-03-31',
+    categories: ['zhkh'],
+    region: 'all',
+    mentionsTotal: 9210,
+    topicsCount: 4,
+    sourcesCount: 12,
+  },
+  {
+    id: 4,
+    title: 'Региональная аналитика Тольятти',
+    type: 'region',
+    typeLabel: 'По регионам',
+    status: 'ready',
+    date: '02.04.2026',
+    from: '2026-03-01',
+    to: '2026-04-02',
+    categories: ['zhkh', 'transport', 'health', 'ecology'],
+    region: 'tolyatti',
+    mentionsTotal: 3240,
+    topicsCount: 3,
+    sourcesCount: 8,
+  },
+]
+
 export const factCheckStats = {
   totalChecked: 487,
   confirmed: 312,

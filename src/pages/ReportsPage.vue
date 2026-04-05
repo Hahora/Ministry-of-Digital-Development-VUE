@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import BaseCard from '@/components/common/BaseCard.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseBadge from '@/components/common/BaseBadge.vue'
@@ -10,11 +11,13 @@ import {
   Mail,
   Calendar,
   CheckCircle2,
+  ArrowRight,
 } from 'lucide-vue-next'
 import {
   topics,
   categoryLabels,
   categoryColors,
+  reports,
   type Category,
 } from '@/data/mockData'
 
@@ -55,12 +58,7 @@ const totalMentions = computed(() => topics.reduce((s, t) => s + t.mentionsCount
 const totalSources = computed(() => topics.reduce((s, t) => s + t.sourcesCount, 0))
 
 /* ── Recent reports ─────────────────────────────── */
-const recentReports = [
-  { id: 1, title: 'Еженедельная сводка 24-31 марта', date: '31.03.2026', type: 'Полная сводка', status: 'ready' },
-  { id: 2, title: 'Топ-10 проблемных тем марта', date: '01.04.2026', type: 'Топ-10', status: 'ready' },
-  { id: 3, title: 'Отчёт по ЖКХ за Q1 2026', date: '01.04.2026', type: 'По категориям', status: 'ready' },
-  { id: 4, title: 'Региональная аналитика Тольятти', date: '02.04.2026', type: 'По регионам', status: 'ready' },
-]
+const recentReports = reports
 </script>
 
 <template>
@@ -271,13 +269,15 @@ const recentReports = [
             <tr
               v-for="report in recentReports"
               :key="report.id"
-              class="border-b border-surface-50 hover:bg-surface-50/50 transition-colors"
+              class="border-b border-surface-50 hover:bg-surface-50/50 transition-colors cursor-pointer"
             >
               <td class="py-3.5 pr-4">
-                <span class="font-medium text-surface-800">{{ report.title }}</span>
+                <RouterLink :to="`/reports/${report.id}`" class="font-medium text-surface-800 hover:text-primary-600 transition-colors">
+                  {{ report.title }}
+                </RouterLink>
               </td>
               <td class="py-3.5 pr-4">
-                <span class="text-surface-500">{{ report.type }}</span>
+                <span class="text-surface-500">{{ report.typeLabel }}</span>
               </td>
               <td class="py-3.5 pr-4">
                 <span class="text-surface-500">{{ report.date }}</span>
@@ -290,11 +290,16 @@ const recentReports = [
                   </span>
                 </BaseBadge>
               </td>
-              <td class="py-3.5 text-right">
+              <td class="py-3.5 text-right flex items-center justify-end gap-2">
                 <BaseButton variant="ghost" size="sm">
                   <Download :size="14" />
                   Скачать
                 </BaseButton>
+                <RouterLink :to="`/reports/${report.id}`">
+                  <BaseButton variant="ghost" size="sm">
+                    <ArrowRight :size="14" />
+                  </BaseButton>
+                </RouterLink>
               </td>
             </tr>
           </tbody>
